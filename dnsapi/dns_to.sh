@@ -1502,12 +1502,12 @@ wait_resolve_ok() {
 }
 
 wait_resolve_nok() {
-  res=""
+  res="junk"
   count=5
   while [ "$res" == ""  ] && [ $dl -gt 0 ];
   do
     sleep 1m
-    res=$(dig -t txt $1 +noall +answer +norecurse | grep $2)
+    res=$(dig -t txt $1 +noall +answer +norecurse)
     count=$(expr $count - 1)
   done
   exit 1
@@ -1523,5 +1523,9 @@ dns_to_add() {
 }
 
 dns_to_rm() {
-  call remove
+  fulldomain="${1}"
+  name=$(echo $fulldomain | cut -d "." -f 1)
+  call remove record txt name $name
+  call reload server master
+  wait_resolve_nok $fulldomain
 }
