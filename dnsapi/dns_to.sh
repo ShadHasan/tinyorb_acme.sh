@@ -17,10 +17,16 @@ set -eE
 trap "Error occurred" ERR
 
 path="$(readlink -f ${BASH_SOURCE[0]})"
-path="$(dirname $path)"
+path="$(dirname $(dirname $path))/resource/dnsapi_to"
 
 # Here we source variable file
-source $path/config/dnsapi_server/variable.sh
+if [ -f $path/variable.sh ]; then
+  source $path/variable.sh
+else
+  echo "Please create variable file at path: $path/variable.sh"
+  exit 0
+fi
+
 
 zone_config_path=$path/tmpattempt/conf/$zone
 meta_info=$zone_config_path/meta.info
