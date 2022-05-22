@@ -35,7 +35,7 @@ CA_SSLCOM_ECC="https://acme.ssl.com/sslcom-dv-ecc"
 CA_GOOGLE="https://dv.acme-v02.api.pki.goog/directory"
 CA_GOOGLE_TEST="https://dv.acme-v02.test-api.pki.goog/directory"
 
-DEFAULT_CA=$CA_ZEROSSL
+DEFAULT_CA=$CA_LETSENCRYPT_V2
 DEFAULT_STAGING_CA=$CA_LETSENCRYPT_V2_TEST
 
 CA_NAMES="
