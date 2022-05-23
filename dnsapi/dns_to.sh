@@ -724,7 +724,7 @@ function not_exist_not_ok(){
 }
 
 function validate_name(){
-  if [[ "${1}" =~ ^[a-zA-Z0-9]{1,63}(\.[a-zA-Z0-9]{1,63})*$ ]]; then
+  if [[ "${1}" =~ ^[a-zA-Z0-9_\-]{1,63}(\.[a-zA-Z0-9_\-]{1,63})*$ ]]; then
     echo "name ok"
   else
     echo "invalid name"
@@ -1557,26 +1557,35 @@ call () {
 
 wait_resolve_ok() {
   res=""
-  count=5
-  while [ "$res" != ""  ] && [ $dl -gt 0 ];
+  count=0
+  while [ "$res" == ""  ] && [ ${count} -lt 5 ];
   do
+    echo "going to sleep for 1 min"
     sleep 1m
-    res=$(dig -t txt ${1} +noall +answer +norecurse | grep ${2})
-    count=$(expr $count - 1)
+    res=$(dig -t txt ${1} | grep "${2}" | xargs echo )
+    count=$(expr ${count} + 1)
   done
-  exit 1
+  if [ "$res" == "" ]; then
+    echo "Fail to resolve"
+    exit 1
+  fi
+  echo "DNS resolution ${res}"
 }
 
 wait_resolve_nok() {
-  res="junk"
-  count=5
-  while [ "$res" == ""  ] && [ $dl -gt 0 ];
+  res=""
+  count=0
+  while [ "$res" == ""  ] && [ ${count} -lt 5 ];
   do
+    echo "going to sleep for 1 min"
     sleep 1m
-    res=$(dig -t txt ${1} +noall +answer +norecurse)
-    count=$(expr $count - 1)
+    res=$(dig -t txt ${1} | grep "ANSWER: 0" | xargs echo)
+    count=$(expr ${count} + 1)
   done
-  exit 1
+  if [ "$res" == "" ]; then
+    echo "Still resolve: ${res}"
+    exit 1
+  fi
 }
 
 dns_to_add() {
