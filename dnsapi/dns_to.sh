@@ -14,29 +14,29 @@
 ##############################################################################
 set -eE
 # set -u  # enable for debugging, it will force to not use unbound variable
-trap "Error occurred" ERR
+# trap "Error occurred" ERR # doesn't work with debug
 
 path="$(readlink -f ${BASH_SOURCE[0]})"
-path="$(dirname $(dirname $path))/resource/dnsapi_to"
+resource_path="~/.dnsapi_to"
 
 # Here we source variable file
-if [ -f $path/variable.sh ]; then
-  source $path/variable.sh
+if [ -f "${resource_path}/variable.sh" ]; then
+  source "${resource_path}/variable.sh"
 else
-  echo "Please create variable file at path: $path/variable.sh"
+  echo "Please create variable file at path: ${resource_path}/variable.sh"
   exit 0
 fi
 
 
-zone_config_path=$path/tmpattempt/conf/$zone
-meta_info=$zone_config_path/meta.info
-if [ ! -d $zone_config_path ]; then
+zone_config_path="${resource_path}/tmpattempt/conf/${zone}"
+meta_info="${zone_config_path}/meta.info"
+if [ ! -d "${zone_config_path}" ]; then
   echo "not exist, zone path creating"
-  mkdir -p $zone_config_path
+  mkdir -p ${zone_config_path}
 fi
 
-if [ -f $meta_info ]; then
-  source $meta_info
+if [ -f "${meta_info}" ]; then
+  source ${meta_info}
 fi
 
 function error_print() {
@@ -46,32 +46,32 @@ function error_print() {
 
 function verify_dependency(){
   dependency_1=$(sshpass -V | head -n 1)
-  if [[ "$dependency_1" =~ "sshpass" ]]; then
+  if [[ "${dependency_1}" =~ "sshpass" ]]; then
     echo "Dependency meet"
   else
     echo "Please install sshpass"
     exit 1
   fi
-  if [[ "$1" == "m" ]]; then
-    sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "echo 'connected'"
+  if [[ "${1}" == "m" ]]; then
+    sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "echo 'connected'"
     echo "Connection verified"
-  elif [ "$1" == "s" ]; then
-    sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "echo 'connected'"
+  elif [ "${1}" == "s" ]; then
+    sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "echo 'connected'"
     echo "Connection verified"
   fi
 }
 
 function verify_just_deploy() {
   echo "Verifying just deployment"
-  if [[ "$1" == "m" ]]; then
-    result=$(sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker image ls tinyorb/bind9 | grep latest" |  xargs echo)
-  elif [[ "$1" == "s" ]]; then
-    result=$(sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker image ls tinyorb/bind9 | grep latest" |  xargs echo)
+  if [[ "${1}" == "m" ]]; then
+    result=$(sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker image ls tinyorb/bind9 | grep latest" |  xargs echo)
+  elif [[ "${1}" == "s" ]]; then
+    result=$(sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker image ls tinyorb/bind9 | grep latest" |  xargs echo)
   else
     echo "No proper response"
     exit 1
   fi
-  if [[ "$result" =~ "bind9" ]]; then
+  if [[ "${result}" =~ "bind9" ]]; then
     echo "Verified dns image"
   else
     echo "Cannot find dns image, please use deploy command to deploy image"
@@ -81,17 +81,17 @@ function verify_just_deploy() {
 }
 
 function verify_deploy() {
-  verify_just_deploy $1
+  verify_just_deploy ${1}
   echo "Verifying deployment"
-  if [[ "$1" == "m" ]]; then
-    result=$(sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker ps -a | grep tinyorb_dns" |  xargs echo)
-  elif [[ "$1" == "s" ]]; then
-    result=$(sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker ps -a | grep tinyorb_dns" |  xargs echo)
+  if [[ "${1}" == "m" ]]; then
+    result=$(sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker ps -a | grep tinyorb_dns" |  xargs echo)
+  elif [[ "${1}" == "s" ]]; then
+    result=$(sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker ps -a | grep tinyorb_dns" |  xargs echo)
   else
     echo "No proper response"
     exit 1
   fi
-  if [[ "$result" =~ "dns"  ]]; then
+  if [[ "${result}" =~ "dns"  ]]; then
     echo "Verified dns service"
   else
     echo "Cannot find service, please use deploy command to create service"
@@ -102,19 +102,19 @@ function verify_deploy() {
 function status() {
     echo "Verifying status"
     result="error"
-    if [[ "$1" == "m" ]]; then
-      result=$(sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker ps -a | grep tinyorb_dns" | xargs echo )
-    elif [[ "$1" == "s" ]]; then
-      result=$(sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker ps -a | grep tinyorb_dns" |  xargs echo)
+    if [[ "${1}" == "m" ]]; then
+      result=$(sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker ps -a | grep tinyorb_dns" | xargs echo )
+    elif [[ "${1}" == "s" ]]; then
+      result=$(sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker ps -a | grep tinyorb_dns" |  xargs echo)
     else
       echo "No proper response"
       exit 1
     fi
-    if [[ "$result" =~ "Up" ]]; then
+    if [[ "${result}" =~ "Up" ]]; then
       echo "Service is running"
-    elif [[ "$result" =~ "Created" ]]; then
+    elif [[ "${result}" =~ "Created" ]]; then
       echo "Service found but not started"
-    elif [[ "$result" =~ "Exited" ]]; then
+    elif [[ "${result}" =~ "Exited" ]]; then
       echo "Service is not running"
     else
       echo "Service status unknown"
@@ -131,19 +131,19 @@ function init_config() {
  if [[ -z ${zone} ]]; then
       echo "zone domain cannot be emptied, Please declare 'zone' in variable file and source at the beginning"
  fi
- echo "By default ns1 is the name for master nameserver with ip $master_dns_host"
+ echo "By default ns1 is the name for master nameserver with ip ${master_dns_host}"
  nameserver="ns1"
- nameserver_ip=$master_dns_host
+ nameserver_ip="${master_dns_host}"
  if [[ "$enable_alt" == "true" ]]; then
-  echo "By default ns2 is the name for alt nameserver with ip $alt_dns_host"
+  echo "By default ns2 is the name for alt nameserver with ip ${alt_dns_host}"
   alt_nameserver="ns2"
-  alt_nameserver_ip=$alt_dns_host
+  alt_nameserver_ip="${alt_dns_host}"
   _y=""
  for i in 3 2 1; do _y=$_y$(echo $alt_nameserver_ip | cut -d "." -f $i).; done;
  alt_reverse_lookup=$_y"in-addr.arpa"
 fi
  y=""
- for i in 3 2 1; do y=$y$(echo $nameserver_ip | cut -d "." -f $i).; done;
+ for i in 3 2 1; do y=$y$(echo ${nameserver_ip} | cut -d "." -f $i).; done;
  reverse_lookup=$y"in-addr.arpa"
  echo "EMAIL without domain name, by default admin: "
  read mail
@@ -180,27 +180,27 @@ fi
  if [[ "$cache_ttl" == "" ]]; then
       cache_ttl=600
   fi
- if [ -d $zone_config_path/master ]; then
+ if [ -d "${zone_config_path}/master" ]; then
    echo "deleting previous config"
-   rm -rf $zone_config_path/master
+   rm -rf "${zone_config_path}/master"
  fi
- if [ -d $zone_config_path/alt ]; then
+ if [ -d "${zone_config_path}/alt" ]; then
    echo "deleting previous config"
-   rm -rf $zone_config_path/alt
+   rm -rf "${zone_config_path}/alt"
  fi
- if [ -f $meta_info ]; then
+ if [ -f "${meta_info}" ]; then
   echo "deleting previous meta"
-  rm -f $meta_info
+  rm -f "${meta_info}"
 fi
- touch $meta_info
- mkdir $zone_config_path/master
- mkdir $zone_config_path/alt
+ touch "${meta_info}"
+ mkdir "${zone_config_path}/master"
+ mkdir "${zone_config_path}/alt"
 
 echo "Creating all necessary configuration"
-cat > $meta_info << END
-zone=$zone
-nameserver=$nameserver
-nameserver_ip=$nameserver_ip
+cat > ${meta_info} << END
+zone=${zone}
+nameserver=${nameserver}
+nameserver_ip=${nameserver_ip}
 reverse_lookup=$reverse_lookup
 mail=$mail
 ttl=$ttl
@@ -212,12 +212,12 @@ cache_ttl=$cache_ttl
 END
 
 if [[ "$enable_alt" == "true" ]]; then
-  echo "alt_nameserver=$alt_nameserver" >> $meta_info
-  echo "alt_nameserver_ip=$alt_nameserver_ip" >> $meta_info
+  echo "alt_nameserver=$alt_nameserver" >> ${meta_info}
+  echo "alt_nameserver_ip=$alt_nameserver_ip" >> ${meta_info}
 
-  cat > $zone_config_path/master/forward.$zone.db << END
+  cat > ${zone_config_path}/master/forward.${zone}.db << END
 \$TTL    $ttl
-@       IN      SOA     $nameserver.$zone. $mail.$zone. (
+@       IN      SOA     ${nameserver}.${zone}. $mail.${zone}. (
                         $serial        ; Serial
                         $refresh       ; Refresh
                         $retry         ; Retry
@@ -226,18 +226,18 @@ if [[ "$enable_alt" == "true" ]]; then
 
 ;Name Server Information
 
-    IN      NS      $nameserver.$zone.
-    IN      NS      $alt_nameserver.$zone.
+    IN      NS      ${nameserver}.${zone}.
+    IN      NS      $alt_nameserver.${zone}.
 
 ;IP address of Name Server
 
-$nameserver.$zone.     IN      A       $nameserver_ip
-$alt_nameserver.$zone.     IN      A       $alt_nameserver_ip
+${nameserver}.${zone}.     IN      A       ${nameserver_ip}
+$alt_nameserver.${zone}.     IN      A       $alt_nameserver_ip
 END
 
-  cat > $zone_config_path/master/reverse.$zone.db << END
+  cat > ${zone_config_path}/master/reverse.${zone}.db << END
 \$TTL    $ttl
-@       IN      SOA     $nameserver.$zone. $mail.$zone. (
+@       IN      SOA     ${nameserver}.${zone}. $mail.${zone}. (
                         $serial        ; Serial
                         $refresh       ; Refresh
                         $retry         ; Retry
@@ -246,65 +246,65 @@ END
 
 ;Name Server Information
 
-    IN      NS      $nameserver.$zone.
+    IN      NS      ${nameserver}.${zone}.
 
 ;IP address of Name Server
-$nameserver.$zone.     IN      A       $nameserver_ip
-$alt_nameserver.$zone.     IN      A       $alt_nameserver_ip
+${nameserver}.${zone}.     IN      A       ${nameserver_ip}
+$alt_nameserver.${zone}.     IN      A       $alt_nameserver_ip
 
 ; PTR record
-$nameserver_ip     IN     PTR       $nameserver.$zone
-$alt_nameserver_ip     IN     PTR       $alt_nameserver.$zone
+${nameserver_ip}     IN     PTR       ${nameserver}.${zone}
+$alt_nameserver_ip     IN     PTR       $alt_nameserver.${zone}
 END
 
-  cat > $zone_config_path/master/named.conf.$zone << END
-zone "$zone" IN {
+  cat > ${zone_config_path}/master/named.conf.${zone} << END
+zone "${zone}" IN {
 
       type master;
 
-     file "/etc/bind/forward.$zone.db";
+     file "/etc/bind/forward.${zone}.db";
 
-     allow-transfer { $alt_dns_host; }; // whom can transfer to here
+     allow-transfer { ${alt_dns_host}; }; // whom can transfer to here
      allow-update { none; };
-     also-notify { $alt_dns_host; };  // change
+     also-notify { ${alt_dns_host}; };  // change
 };
 
 zone "$reverse_lookup" IN {
 
      type master;
 
-     file "/etc/bind/reverse.$zone.db";
+     file "/etc/bind/reverse.${zone}.db";
 
-     allow-transfer { $alt_dns_host; }; // whom can transfer to here
+     allow-transfer { ${alt_dns_host}; }; // whom can transfer to here
      allow-update { none; };
-     also-notify { $alt_dns_host; }; // notify change
+     also-notify { ${alt_dns_host}; }; // notify change
 };
 END
 
-  cat > $zone_config_path/alt/named.conf.$zone << END
-zone "$zone" IN {
+  cat > ${zone_config_path}/alt/named.conf.${zone} << END
+zone "${zone}" IN {
 
      type slave;
 
-     file "/var/cache/bind/forward.$zone.db";
+     file "/var/cache/bind/forward.${zone}.db";
 
-     masters { $master_dns_host; };
+     masters { ${master_dns_host}; };
 };
 
 zone "$alt_reverse_lookup" IN {
 
      type slave;
 
-     file "/var/cache/bind/reverse.$zone.db";
+     file "/var/cache/bind/reverse.${zone}.db";
 
-     masters { $master_dns_host; };
+     masters { ${master_dns_host}; };
 };
 END
 
-  cat > $zone_config_path/alt/named.conf.options << END
+  cat > ${zone_config_path}/alt/named.conf.options << END
 acl "trusted" {
-  $master_dns_host;
-  $alt_dns_host;
+  ${master_dns_host};
+  ${alt_dns_host};
   172.17.0.2;
   127.0.0.1;
   8.8.8.8;
@@ -320,7 +320,7 @@ options {
 };
 END
 
-  cat > $zone_config_path/alt/named.conf << END
+  cat > ${zone_config_path}/alt/named.conf << END
 logging {
    channel "misc" {
       file "/var/log/bind_misc.log" versions 4 size 4m;
@@ -342,17 +342,17 @@ logging {
    };
 };
 include "/etc/bind/named.conf.options";
-include "/etc/bind/named.conf.$zone";
+include "/etc/bind/named.conf.${zone}";
 END
 
 else
 
-  cat > $zone_config_path/master/named.conf.$zone << END
-zone "$zone" IN {
+  cat > ${zone_config_path}/master/named.conf.${zone} << END
+zone "${zone}" IN {
 
       type master;
 
-     file "/etc/bind/forward.$zone.db";
+     file "/etc/bind/forward.${zone}.db";
 
      allow-update { none; };
 };
@@ -361,23 +361,23 @@ zone "$reverse_lookup" IN {
 
      type master;
 
-     file "/etc/bind/reverse.$zone.db";
+     file "/etc/bind/reverse.${zone}.db";
 
      allow-update { none; };
 };
 END
 
-  cat > $zone_config_path/master/named.conf << END
+  cat > ${zone_config_path}/master/named.conf << END
 include "/etc/bind/named.conf.options";
-include "/etc/bind/named.conf.$zone";
+include "/etc/bind/named.conf.${zone}";
 END
 
 fi
 
-  cat > $zone_config_path/master/named.conf.options << END
+  cat > ${zone_config_path}/master/named.conf.options << END
 acl "trusted" {
-  $master_dns_host;
-  $alt_dns_host;
+  ${master_dns_host};
+  ${alt_dns_host};
   172.17.0.2;
   127.0.0.1;
   8.8.8.8;
@@ -405,7 +405,7 @@ options {
 };
 END
 
-  cat > $zone_config_path/master/named.conf << END
+  cat > ${zone_config_path}/master/named.conf << END
 logging {
    channel "misc" {
       file "/var/log/bind_misc.log" versions 4 size 4m;
@@ -427,7 +427,7 @@ logging {
    };
 };
 include "/etc/bind/named.conf.options";
-include "/etc/bind/named.conf.$zone";
+include "/etc/bind/named.conf.${zone}";
 include "/etc/bind/named.conf.default-zones"; // root hint causing forwarder problem.
 END
 
@@ -435,16 +435,16 @@ END
 
 function push_config() {
   echo "pushing config"
-  if [[ "$1" == "m" ]]; then
-    sshpass scp -r $zone_config_path/master $user@$master_dns_host:$remote_tmp_path
-    sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "rm -rf $remote_tmp_path'bind9' || true"
-    sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "mv $remote_tmp_path'master' $remote_tmp_path'bind9'"
-    sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'bind9' tinyorb_dns:/tmp/"
-  elif [[ "$1" == "s" ]]; then
-    sshpass scp -r $zone_config_path/alt $alt_user@$alt_dns_host:$remote_tmp_path
-    sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "rm -rf $remote_tmp_path'bind9' || true"
-    sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "mv $remote_tmp_path'alt' $remote_tmp_path'bind9'"
-    sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'bind9' tinyorb_dns:/tmp/"
+  if [[ "${1}" == "m" ]]; then
+    sshpass scp -r ${zone_config_path}/master ${user}@${master_dns_host}:$remote_tmp_path
+    sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "rm -rf $remote_tmp_path'bind9' || true"
+    sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "mv $remote_tmp_path'master' $remote_tmp_path'bind9'"
+    sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'bind9' tinyorb_dns:/tmp/"
+  elif [[ "${1}" == "s" ]]; then
+    sshpass scp -r ${zone_config_path}/alt ${alt_user}@${alt_dns_host}:$remote_tmp_path
+    sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "rm -rf $remote_tmp_path'bind9' || true"
+    sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "mv $remote_tmp_path'alt' $remote_tmp_path'bind9'"
+    sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'bind9' tinyorb_dns:/tmp/"
   else
     echo "No proper response"
     exit 1
@@ -453,20 +453,20 @@ function push_config() {
 }
 
 function increment_forward_serial() {
-  num=$(grep -nE "[ ]+[0-9]+[ ]+;[ ]+Serial" $zone_config_path/master/forward.$zone.db | grep -o -E "[0-9]+")
+  num=$(grep -nE "[ ]+[0-9]+[ ]+;[ ]+Serial" ${zone_config_path}/master/forward.${zone}.db | grep -o -E "[0-9]+")
   line_no=$(echo $num | cut -d " " -f 1)
   serial_no=$(echo $num | cut -d " " -f 2)
   serial_no=$(expr $serial_no + 1)
-  sed -r -i "s/([0-9])+.*Serial/$serial_no        ;     Serial/g" $zone_config_path/master/forward.$zone.db
+  sed -r -i "s/([0-9])+.*Serial/$serial_no        ;     Serial/g" ${zone_config_path}/master/forward.${zone}.db
 }
 
 function just_deploy() {
-    if [[ "$1" == "m" ]]; then
+    if [[ "${1}" == "m" ]]; then
         echo "deploying master dns"
-        sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker pull tinyorb/bind9"
-    elif [[ "$1" == "s" ]]; then
+        sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker pull tinyorb/bind9"
+    elif [[ "${1}" == "s" ]]; then
       echo "deploying alt dns"
-      sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker pull tinyorb/bind9"
+      sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker pull tinyorb/bind9"
     else
       echo "No proper response"
       exit 1
@@ -474,23 +474,23 @@ function just_deploy() {
 }
 
 function deploy() {
-    dns_type=$1
+    dns_type=${1}
     just_deploy $dns_type
     if [[ "$dns_type" == "m" ]]; then
-      sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker create --name=tinyorb_dns -p 53:53/tcp -p 53:53/udp --cap-add=NET_ADMIN tinyorb/bind9 | true"
-      sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "touch $remote_tmp_path'bind_query.log' $remote_tmp_path'bind_misc.log'"
-      sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "chmod 777 $remote_tmp_path'bind_query.log' $remote_tmp_path'bind_misc.log'"
-      sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'bind_query.log' tinyorb_dns:/var/log/"
-      sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'bind_misc.log' tinyorb_dns:/var/log/"
+      sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker create --name=tinyorb_dns -p 53:53/tcp -p 53:53/udp --cap-add=NET_ADMIN tinyorb/bind9 | true"
+      sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "touch $remote_tmp_path'bind_query.log' $remote_tmp_path'bind_misc.log'"
+      sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "chmod 777 $remote_tmp_path'bind_query.log' $remote_tmp_path'bind_misc.log'"
+      sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'bind_query.log' tinyorb_dns:/var/log/"
+      sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'bind_misc.log' tinyorb_dns:/var/log/"
     elif [[ "$dns_type" == "s" ]]; then
-      sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker create --name=tinyorb_dns -p 53:53/tcp -p 53:53/udp --cap-add=NET_ADMIN tinyorb/bind9 | true"
-      sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "rm $remote_tmp_path'bind_query.log' $remote_tmp_path'bind_misc.log' $remote_tmp_path'forward.'$zone'.db' $remote_tmp_path'reverse.'$zone'.db'"
-      sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "touch $remote_tmp_path'bind_query.log' $remote_tmp_path'bind_misc.log' $remote_tmp_path'forward.'$zone'.db' $remote_tmp_path'reverse.'$zone'.db'"
-      sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "chmod 777 $remote_tmp_path'bind_query.log' $remote_tmp_path'bind_misc.log' $remote_tmp_path'forward.'$zone'.db' $remote_tmp_path'reverse.'$zone'.db'"
-      sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'bind_query.log' tinyorb_dns:/var/log/"
-      sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'bind_misc.log' tinyorb_dns:/var/log/"
-      sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'forward.'$zone'.db' tinyorb_dns:/var/cache/bind/forward.$zone.db"
-      sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'reverse.'$zone'.db' tinyorb_dns:/var/cache/bind/reverse.$zone.db"
+      sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker create --name=tinyorb_dns -p 53:53/tcp -p 53:53/udp --cap-add=NET_ADMIN tinyorb/bind9 | true"
+      sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "rm $remote_tmp_path'bind_query.log' $remote_tmp_path'bind_misc.log' $remote_tmp_path'forward.'${zone}'.db' $remote_tmp_path'reverse.'${zone}'.db'"
+      sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "touch $remote_tmp_path'bind_query.log' $remote_tmp_path'bind_misc.log' $remote_tmp_path'forward.'${zone}'.db' $remote_tmp_path'reverse.'${zone}'.db'"
+      sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "chmod 777 $remote_tmp_path'bind_query.log' $remote_tmp_path'bind_misc.log' $remote_tmp_path'forward.'${zone}'.db' $remote_tmp_path'reverse.'${zone}'.db'"
+      sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'bind_query.log' tinyorb_dns:/var/log/"
+      sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'bind_misc.log' tinyorb_dns:/var/log/"
+      sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'forward.'${zone}'.db' tinyorb_dns:/var/cache/bind/forward.${zone}.db"
+      sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker cp  $remote_tmp_path'reverse.'${zone}'.db' tinyorb_dns:/var/cache/bind/reverse.${zone}.db"
     else
       echo "No proper response"
       exit 1
@@ -499,12 +499,12 @@ function deploy() {
 }
 
 function start_dns() {
-  if [[ "$1" == "m" ]]; then
+  if [[ "${1}" == "m" ]]; then
     echo "starting master dns"
-    sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker start tinyorb_dns"
-  elif [[ "$1" == "s" ]]; then
+    sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker start tinyorb_dns"
+  elif [[ "${1}" == "s" ]]; then
     echo "starting alt dns"
-    sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker start tinyorb_dns"
+    sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker start tinyorb_dns"
   else
     echo "No proper response"
     exit 1
@@ -512,12 +512,12 @@ function start_dns() {
 }
 
 function stop_dns() {
-  if [[ "$1" == "m" ]]; then
+  if [[ "${1}" == "m" ]]; then
     echo "stopping master dns"
-    sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker stop tinyorb_dns"
-  elif [[ "$1" == "s" ]]; then
+    sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker stop tinyorb_dns"
+  elif [[ "${1}" == "s" ]]; then
     echo "stopping alt dns"
-    sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker stop tinyorb_dns"
+    sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker stop tinyorb_dns"
   else
     echo "No proper response"
     exit 1
@@ -525,14 +525,14 @@ function stop_dns() {
 }
 
 function undeploy() {
-  if [[ "$1" == "m" ]]; then
+  if [[ "${1}" == "m" ]]; then
     echo "going to undeploy master dns"
-    sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker kill tinyorb_dns || true"
-    sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker rm tinyorb_dns"
-  elif [[ "$1" == "s" ]]; then
+    sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker kill tinyorb_dns || true"
+    sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker rm tinyorb_dns"
+  elif [[ "${1}" == "s" ]]; then
     echo "going to undeploy alt dns"
-    sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker kill tinyorb_dns || true"
-    sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker rm tinyorb_dns"
+    sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker kill tinyorb_dns || true"
+    sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker rm tinyorb_dns"
   else
     echo "No proper response"
     exit 1
@@ -540,13 +540,13 @@ function undeploy() {
 }
 
 function reload_dns() {
-  push_config $1
-  if [[ "$1" == "m" ]]; then
+  push_config ${1}
+  if [[ "${1}" == "m" ]]; then
     echo "starting master dns"
-    sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker restart tinyorb_dns"
-  elif [[ "$1" == "s" ]]; then
+    sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker restart tinyorb_dns"
+  elif [[ "${1}" == "s" ]]; then
     echo "starting alt dns"
-    sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker restart tinyorb_dns"
+    sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker restart tinyorb_dns"
   else
     echo "No proper response"
     exit 1
@@ -554,24 +554,24 @@ function reload_dns() {
 }
 
 function verify_zone_config() {
-  if [ -f $meta_info ]; then
+  if [ -f "${meta_info}" ]; then
     echo "Found config"
   else
     echo "Zone config not found. To create config use: ./dnsapi init"
     exit 1
   fi
-  source $meta_info
-  if [[ "$1" == "m" ]]; then
+  source ${meta_info}
+  if [[ "${1}" == "m" ]]; then
     echo "Checking on master dns"
-    result=$(sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker exec -t tinyorb_dns named-checkzone $zone /etc/bind/forward.$zone.db" | xargs echo ) RCODE=$?
+    result=$(sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker exec -t tinyorb_dns named-checkzone ${zone} /etc/bind/forward.${zone}.db" | xargs echo ) RCODE=$?
     printf "%s" ${result@Q}
-    result=$(sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker exec -t tinyorb_dns named-checkzone $zone /etc/bind/reverse.$zone.db" | xargs echo ) RCODE=$?
+    result=$(sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker exec -t tinyorb_dns named-checkzone ${zone} /etc/bind/reverse.${zone}.db" | xargs echo ) RCODE=$?
     printf "%s" ${result@Q}
-  elif [[ "$1" == "s" ]]; then
+  elif [[ "${1}" == "s" ]]; then
     echo "Checking on alt dns"
-    result=$(sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker exec -t tinyorb_dns named-checkzone $zone /etc/bind/forward.$zone.db" | xargs echo ) RCODE=$?
+    result=$(sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker exec -t tinyorb_dns named-checkzone ${zone} /etc/bind/forward.${zone}.db" | xargs echo ) RCODE=$?
     printf "%s" ${result@Q}
-    result=$(sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker exec -t tinyorb_dns named-checkzone $zone /etc/bind/reverse.$zone.db" | xargs echo ) RCODE=$?
+    result=$(sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker exec -t tinyorb_dns named-checkzone ${zone} /etc/bind/reverse.${zone}.db" | xargs echo ) RCODE=$?
     printf "%s" ${result@Q}
   else
     echo "No proper response"
@@ -580,12 +580,12 @@ function verify_zone_config() {
 }
 
 function verify_dns_config() {
-  if [[ "$1" == "m" ]]; then
+  if [[ "${1}" == "m" ]]; then
     echo "Checking on master dns"
-    result=$(sshpass ssh -t $user@$master_dns_host -o StrictHostKeyChecking=no "sudo docker exec -t tinyorb_dns named-checkconf -p" | xargs echo ) RCODE=$?
-  elif [[ "$1" == "s" ]]; then
+    result=$(sshpass ssh -t ${user}@${master_dns_host} -o StrictHostKeyChecking=no "sudo docker exec -t tinyorb_dns named-checkconf -p" | xargs echo ) RCODE=$?
+  elif [[ "${1}" == "s" ]]; then
     echo "Checking on alt dns"
-    result=$(sshpass ssh -t $alt_user@$alt_dns_host -o StrictHostKeyChecking=no "sudo docker exec -t tinyorb_dns named-checkconf -p" | xargs echo ) RCODE=$?
+    result=$(sshpass ssh -t ${alt_user}@${alt_dns_host} -o StrictHostKeyChecking=no "sudo docker exec -t tinyorb_dns named-checkconf -p" | xargs echo ) RCODE=$?
   else
     echo "No proper response"
     exit 1
@@ -594,17 +594,17 @@ function verify_dns_config() {
 }
 
 function show_record(){
-  readarray -t _record < <( grep -n ".*[ \t]$1[ \t].*" $zone_config_path/master/forward.$zone.db || echo "")
+  readarray -t _record < <( grep -n ".*[ \t]${1}[ \t].*" ${zone_config_path}/master/forward.${zone}.db || echo "")
   for record in "${_record[@]}"; do
     result=$(echo $record | cut -d ":" -f 2)
-    echo $result
+    echo "${result}"
   done
 }
 
 function remove_record(){
-  readarray -t _record < <( grep -n "[ \t]$1[ \t]" $zone_config_path/master/forward.$zone.db || echo ""  )
+  readarray -t _record < <( grep -n "[ \t]${1}[ \t]" ${zone_config_path}/master/forward.${zone}.db || echo ""  )
   if [[ "${_record}" == "" ]]; then
-    echo "No record of $1 found"
+    echo "No record of ${1} found"
     exit 1
   fi
   i=1
@@ -616,7 +616,7 @@ function remove_record(){
       mrs=$mrs";"
     fi
     mrs=$mrs$ln
-    echo $i"    "$result
+    echo "${i}    ${result}"
     i=$(expr $i + 1)
   done
   echo "Enter the record no. which you want to delete"
@@ -625,11 +625,11 @@ function remove_record(){
   echo "$dl and $mrs and $rl"
   if [[ "$dl" != "" ]] && [ $dl -gt 0 ]; then
     echo "Do you want to remove below record, enter 'y'"
-    sed "$dl!d" $zone_config_path/master/forward.$zone.db    # '!' in sed act as compliment. Here 'd' return file by deleting line but '!d' return deleted line
+    sed "$dl!d" ${zone_config_path}/master/forward.${zone}.db    # '!' in sed act as compliment. Here 'd' return file by deleting line but '!d' return deleted line
     read confirm
       if [[ "$confirm" == "y" ]]; then
         echo $dl ## here you have to add delete line command by line number
-        sed -i "${dl}d" $zone_config_path/master/forward.$zone.db
+        sed -i "${dl}d" ${zone_config_path}/master/forward.${zone}.db
         echo "deleted line no $dl"
       fi
   else
@@ -639,20 +639,20 @@ function remove_record(){
 }
 
 function remove_record_by_name(){
-  record=$1.$zone
-  record_type=$2
+  record="${1}.${zone}"
+  record_type=${2}
   not_exist_not_ok $record $record_type
   re=$(echo "^$record.*[ \t]$record_type[ \t]")
-  _record=$(grep -n "$re" $zone_config_path/master/forward.$zone.db)
+  _record=$(grep -n "$re" ${zone_config_path}/master/forward.${zone}.db)
   dl=$(echo $_record | cut -d ":" -f 1)
-  sed -i "${dl}d" $zone_config_path/master/forward.$zone.db
+  sed -i "${dl}d" ${zone_config_path}/master/forward.${zone}.db
   echo "deleted line no $dl"
 }
 
 function exist_not_ok(){
-  record=$1
-  record_type=$2
-  file_path=$zone_config_path/master/forward.$zone.db
+  record=${1}
+  record_type=${2}
+  file_path=${zone_config_path}/master/forward.${zone}.db
   re=".*$record.*[ \t]$record_type[ \t].*"
   exist=$(cat $file_path | grep "$re" | xargs echo )
   if [[ "$exist" != "" ]]; then
@@ -662,9 +662,9 @@ function exist_not_ok(){
 }
 
 function not_exist_not_ok(){
-  record=$1
-  record_type=$2
-  file_path=$zone_config_path/master/forward.$zone.db
+  record=${1}
+  record_type="${2}"
+  file_path=${zone_config_path}/master/forward.${zone}.db
   re="^$record.*[ \t]$record_type[ \t].*"
   exist=$(cat $file_path | grep "$re" | xargs echo )
   if [[ "$exist" == "" ]]; then
@@ -674,7 +674,7 @@ function not_exist_not_ok(){
 }
 
 function validate_name(){
-  if [[ "$1" =~ ^[a-zA-Z0-9]{1,63}(\.[a-zA-Z0-9]{1,63})*$ ]]; then
+  if [[ "${1}" =~ ^[a-zA-Z0-9]{1,63}(\.[a-zA-Z0-9]{1,63})*$ ]]; then
     echo "name ok"
   else
     echo "invalid name"
@@ -683,7 +683,7 @@ function validate_name(){
 }
 
 function validate_ip(){
-  if [[ "$1" =~  (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}  ]]; then
+  if [[ "${1}" =~  (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}  ]]; then
     echo "ip ok"
   else
     echo "not valid ip"
@@ -692,39 +692,39 @@ function validate_ip(){
 }
 
 function add_record_a(){
-  printf "\n%s.%s.     IN      A       %s" $1 $zone $2 >> $zone_config_path/master/forward.$zone.db
-  echo "Record '$1.$zone.     IN      A       $2' has been added to local config"
+  printf "\n%s.%s.     IN      A       %s" ${1} ${zone} ${2} >> ${zone_config_path}/master/forward.${zone}.db
+  echo "Record '${1}.${zone}.     IN      A       ${2}' has been added to local config"
 }
 
 function add_record_txt(){
-  printf "\n%s.%s.     IN      TXT       \"%s\"" $1 $zone $2 >> $zone_config_path/master/forward.$zone.db
-  echo "Record $1.$zone.     IN      TXT       $2 has been added to local config"
+  printf "\n%s.%s.     IN      TXT       \"%s\"" ${1} ${zone} ${2} >> ${zone_config_path}/master/forward.${zone}.db
+  echo "Record ${1}.${zone}.     IN      TXT       ${2} has been added to local config"
 }
 
 function add_record_cname(){
-  name=$1               # name should prefix without zone
-  cname=$2              # cname should fqdn(fully qualified domain name)
-  printf "\n%s.%s.     IN      CNAME       %s" $name $zone $cname >> $zone_config_path/master/forward.$zone.db
-  echo "Record $name.$zone.     IN      CNAME       $cname has been added to local config"
+  name=${1}               # name should prefix without zone
+  cname=${2}              # cname should fqdn(fully qualified domain name)
+  printf "\n%s.%s.     IN      CNAME       %s" ${name} ${zone} $cname >> ${zone_config_path}/master/forward.${zone}.db
+  echo "Record ${name}.${zone}.     IN      CNAME       $cname has been added to local config"
 }
 
 function add_record_ns(){
-  fqdn=$1.$zone # Use `@` if authoritative_domain is itself nameserver,
+  fqdn=${1}.${zone} # Use `@` if authoritative_domain is itself nameserver,
                           # Example: `@   NS     <fqdn_nameserver>`
                           # else on other resolver/provider like goddady/crazydomain use fqdn of domain
                           # Example: `sample.   NS    <fqdn_nameserver>`
-  ip=$2
+  ip=${2}
 
-  printf "\n     IN       NS       %s" $fqdn >> $zone_config_path/master/forward.$zone.db
+  printf "\n     IN       NS       %s" $fqdn >> ${zone_config_path}/master/forward.${zone}.db
   echo 'Record    NS       $fqdn_nameserver has been added to local config'
 
-  add_record_a $1 $ip
-  add_record_ptr $ip $1
+  add_record_a ${1} $ip
+  add_record_ptr $ip ${1}
 }
 
 function add_record_ptr() {
-  printf "\n%s     IN      PTR       %s.%s." $1 $2 $zone >> $zone_config_path/master/reverse.$zone.db
-  echo "Record '$1     IN      A       $2.$zone.' has been added to local config"
+  printf "\n%s     IN      PTR       %s.%s." ${1} ${2} ${zone} >> ${zone_config_path}/master/reverse.${zone}.db
+  echo "Record '${1}     IN      A       ${2}.${zone}.' has been added to local config"
 }
 
 function install_dnsclient() {
@@ -733,7 +733,7 @@ function install_dnsclient() {
     exit 1
   fi
   result=$(sudo docker ps -a | grep dnsclient | xargs echo)
-  if [[ "$result" == "" ]]; then
+  if [[ "${result}" == "" ]]; then
     sudo docker pull tinyorb/dnsclient
     sudo docker create --name=dnsclient tinyorb/dnsclient | true
   fi
@@ -742,9 +742,9 @@ function install_dnsclient() {
 function set_client() {
   start_client
   echo "setting dns..."
-  sudo docker exec dnsclient bash -c "echo m=$master_dns_host > /tmp/ns"
+  sudo docker exec dnsclient bash -c "echo m=${master_dns_host} > /tmp/ns"
   if [[ "$enable_alt" == "true" ]]; then
-    sudo docker exec dnsclient bash -c "echo a=$alt_dns_host >> /tmp/ns"
+    sudo docker exec dnsclient bash -c "echo a=${alt_dns_host} >> /tmp/ns"
   fi
   stop_client
   start_client
@@ -756,13 +756,13 @@ function wait_client_up() {
   do
     sleep 1;
     y=$(sudo docker ps | grep dnsclient);
-    if [[ "$y" =~ "Up" ]]; then
+    if [[ "${y}" =~ "Up" ]]; then
       echo "dnsclient is up"
       f=1
       break
     fi
   done
-  if [[ "$f" == "0" ]]; then
+  if [[ "${f}" == "0" ]]; then
     echo "Timeout! dnsclient status unknown"
   fi
 }
@@ -770,7 +770,7 @@ function wait_client_up() {
 function start_client() {
   install_dnsclient
   result=$(sudo docker ps | grep dnsclient | xargs echo)
-  if ! [[ "$result" =~ "Up" ]]; then
+  if ! [[ "${result}" =~ "Up" ]]; then
     sudo docker start dnsclient
     wait_client_up
   else
@@ -786,38 +786,38 @@ function stop_client() {
 function status_client() {
   install_dnsclient
   result=$(sudo docker ps -a | grep dnsclient | xargs echo)
-  echo $result
+  echo ${result}
 }
 
 function record_verify_client() {
-  name=$2
-  case $1 in
+  name=${2}
+  case ${1} in
     authority)
-      command="dig $zone +noall +authority +norecurse"
+      command="dig ${zone} +noall +authority +norecurse"
       ;;
     NS)
-      case $2 in
+      case ${2} in
       master)
-        server=$nameserver
+        server=${nameserver}
         ;;
       alt)
-        server=$nameserver2
+        server=${alt_nameserver}
         ;;
       *)
         echo "unknown nameserver"
         exit 1
         ;;
       esac
-      command="dig $server.$zone +noall +answer +norecurse"
+      command="dig $server.${zone} +noall +answer +norecurse"
       ;;
     A)
-      command="dig -t a $name.$zone +noall +answer +norecurse"
+      command="dig -t a ${name}.${zone} +noall +answer +norecurse"
       ;;
     TXT)
-      command="dig -t txt $name.$zone +noall +answer +norecurse"
+      command="dig -t txt ${name}.${zone} +noall +answer +norecurse"
       ;;
     CNAME)
-      command="dig -t cname $name.$zone +noall +answer +norecurse"
+      command="dig -t cname ${name}.${zone} +noall +answer +norecurse"
       ;;
   esac
   echo "Executing $command"
@@ -826,17 +826,17 @@ function record_verify_client() {
   elif [[ "$native_dns_client" == "false" ]]; then
     result=$($command)
   fi
-  if [[ "$3" == "" ]]; then
-    if [[ "$result" == "" ]]; then
-      error_print "No result $result"
+  if [[ "${3}" == "" ]]; then
+    if [[ "${result}" == "" ]]; then
+      error_print "No result ${result}"
     else
-      echo "ok result: $result"
+      echo "ok result: ${result}"
     fi
   else
-    if [[ "$result" =~ "$3" ]]; then
-      echo  "ok result $result"
+    if [[ "${result}" =~ "${3}" ]]; then
+      echo  "ok result ${result}"
     else
-      error_print "No result $result"
+      error_print "No result ${result}"
     fi
   fi
 
@@ -847,14 +847,14 @@ function show_ns_client() {
 }
 
 call () {
-  case $1 in
+  case ${1} in
   init)
     init_config
     ;;
   start)
-    case $2 in
+    case ${2} in
     server)
-      case $3 in
+      case ${3} in
       master)
         start_dns "m"
         ;;
@@ -871,9 +871,9 @@ call () {
     esac
     ;;
   stop)
-    case $2 in
+    case ${2} in
     server)
-      case $3 in
+      case ${3} in
       master)
         stop_dns "m"
         ;;
@@ -890,9 +890,9 @@ call () {
     esac
     ;;
   undeploy)
-    case $2 in
+    case ${2} in
     server)
-      case $3 in
+      case ${3} in
       master)
         stop_dns "m"
         undeploy "m"
@@ -911,9 +911,9 @@ call () {
     esac
     ;;
   reload)
-    case $2 in
+    case ${2} in
     server)
-      case $3 in
+      case ${3} in
       master)
         reload_dns "m"
         ;;
@@ -930,9 +930,9 @@ call () {
     esac
     ;;
   push)
-    case $2 in
+    case ${2} in
     server)
-      case $3 in
+      case ${3} in
       master)
         push_config "m"
         ;;
@@ -949,9 +949,9 @@ call () {
     esac
     ;;
   deploy)
-    case $2 in
+    case ${2} in
     server)
-      case $3 in
+      case ${3} in
       master)
         deploy "m"
         ;;
@@ -968,9 +968,9 @@ call () {
     esac
     ;;
   just_deploy)
-    case $2 in
+    case ${2} in
     server)
-      case $3 in
+      case ${3} in
       master)
         just_deploy "m"
         ;;
@@ -987,9 +987,9 @@ call () {
     esac
     ;;
   status)
-    case $2 in
+    case ${2} in
     server)
-      case $3 in
+      case ${3} in
       master)
         status "m"
         ;;
@@ -1006,14 +1006,14 @@ call () {
     esac
     ;;
   verify)
-    case $2 in
+    case ${2} in
     consistency)
       ;;
     connection|dependency)
       echo "Please make sure variable.sh path have relevant detail and sshpass install"
-      case $3 in
+      case ${3} in
       server)
-        case $4 in
+        case ${4} in
         master)
           verify_dependency "m"
           ;;
@@ -1021,18 +1021,18 @@ call () {
           verify_dependency "s"
           ;;
         *)
-          echo "Incorrect command, try 'dnsapi verify $2 server master|alt'"
+          echo "Incorrect command, try 'dnsapi verify ${2} server master|alt'"
           ;;
         esac
         ;;
       *)
-        echo "Incorrect command, try 'dnsapi verify $2 server'"
+        echo "Incorrect command, try 'dnsapi verify ${2} server'"
       esac
       ;;
     zone)
-      case $3 in
+      case ${3} in
       server)
-        case $4 in
+        case ${4} in
         master)
           verify_zone_config "m"
           ;;
@@ -1040,18 +1040,18 @@ call () {
           verify_zone_config "s"
           ;;
         *)
-          echo "Incorrect command, try 'dnsapi verify $2 server master|alt'"
+          echo "Incorrect command, try 'dnsapi verify ${2} server master|alt'"
           ;;
         esac
         ;;
       *)
-        echo "Incorrect command, try 'dnsapi verify $2 server'"
+        echo "Incorrect command, try 'dnsapi verify ${2} server'"
       esac
       ;;
     config)
-      case $3 in
+      case ${3} in
       server)
-        case $4 in
+        case ${4} in
         master)
           verify_dns_config "m"
           ;;
@@ -1059,18 +1059,18 @@ call () {
           verify_dns_config "s"
           ;;
         *)
-          echo "Incorrect command, try 'dnsapi verify $2 server master|alt'"
+          echo "Incorrect command, try 'dnsapi verify ${2} server master|alt'"
           ;;
         esac
         ;;
       *)
-        echo "Incorrect command, try 'dnsapi verify $2 server'"
+        echo "Incorrect command, try 'dnsapi verify ${2} server'"
       esac
       ;;
     just_deploy)
-      case $3 in
+      case ${3} in
       server)
-        case $4 in
+        case ${4} in
         master)
           verify_just_deploy "m"
           ;;
@@ -1078,18 +1078,18 @@ call () {
           verify_just_deploy "s"
           ;;
         *)
-          echo "Incorrect command, try 'dnsapi verify $2 server master|alt'"
+          echo "Incorrect command, try 'dnsapi verify ${2} server master|alt'"
           ;;
         esac
         ;;
       *)
-        echo "Incorrect command, try 'dnsapi verify $2 server'"
+        echo "Incorrect command, try 'dnsapi verify ${2} server'"
       esac
       ;;
     deploy)
-      case $3 in
+      case ${3} in
       server)
-        case $4 in
+        case ${4} in
         master)
           verify_deploy "m"
           ;;
@@ -1097,37 +1097,37 @@ call () {
           verify_deploy "s"
           ;;
         *)
-          echo "Incorrect command, try 'dnsapi verify $2 server master|alt'"
+          echo "Incorrect command, try 'dnsapi verify ${2} server master|alt'"
           ;;
         esac
         ;;
       *)
-        echo "Incorrect command, try 'dnsapi verify $2 server'"
+        echo "Incorrect command, try 'dnsapi verify ${2} server'"
       esac
       ;;
     record)
-      case $5 in
+      case ${5} in
       expect)
-        expectation=$6
+        expectation=${6}
         ;;
       *)
         expectation=""
       esac
-      case $3 in
+      case ${3} in
       txt|TXT)
-        record_verify_client TXT $4 $expectation
+        record_verify_client TXT ${4} $expectation
         ;;
       a|A)
-        record_verify_client A $4 $expectation
+        record_verify_client A ${4} $expectation
         ;;
       ns|NS)
-        record_verify_client NS $4 $expectation
+        record_verify_client NS ${4} $expectation
         ;;
       authority)
         record_verify_client authority
         ;;
       cname)
-        record_verify_client cname $4 $expectation
+        record_verify_client cname ${4} $expectation
         ;;
       help)
         echo "Usage:"
@@ -1146,9 +1146,9 @@ call () {
     esac
     ;;
   show)
-    case $2 in
+    case ${2} in
     record)
-      case $3 in
+      case ${3} in
       A|a)
         show_record A
         ;;
@@ -1183,41 +1183,41 @@ call () {
     esac
     ;;
   -i)
-    case $2 in
+    case ${2} in
     add)
-      case $3 in
+      case ${3} in
       record)
-        case $4 in
+        case ${4} in
           [tT][xX][tT])
             echo "Enter name for TXT Record"
             read name
-            validate_name $name
-            exist_not_ok $name.$zone A
+            validate_name ${name}
+            exist_not_ok "${name}.${zone}" A
             echo "Enter value"
             read value
-            add_record_txt $name $value
+            add_record_txt ${name} $value
             change_success=0
             ;;
           [aA])
             echo "Enter name for A Record"
             read name
-            validate_name $name
-            exist_not_ok $name.$zone A
+            validate_name ${name}
+            exist_not_ok "${name}.${zone}" A
             echo "Enter ipv4 IP address"
             read ip
             validate_ip $ip
-            add_record_a $name $ip
+            add_record_a ${name} $ip
             change_success=0
             ;;
           [cC][nN][aA][mM][eE])
             echo "Enter name for CNAME Record"
             read name
-            validate_name $name
-            exist_not_ok $name.$zone A
+            validate_name ${name}
+            exist_not_ok "${name}.${zone}" A
             echo "Enter CNAME FQDN"
             read cname
             validate_name $cname
-            add_record_cname $name $cname
+            add_record_cname ${name} $cname
             change_success=0
             ;;
           [nN][sS])
@@ -1244,9 +1244,9 @@ call () {
       esac
       ;;
     remove)
-      case $3 in
+      case ${3} in
       record)
-        case $4 in
+        case ${4} in
         [aA])
           remove_record A
           change_success=0
@@ -1285,7 +1285,7 @@ call () {
     esac
     ;;
   client)
-    case $2 in
+    case ${2} in
     set)
       set_client
       ;;
@@ -1306,18 +1306,18 @@ call () {
     esac
     ;;
   add)
-    case $2 in
+    case ${2} in
     record)
-      case $3 in
+      case ${3} in
       [aA])
-        case $4 in
+        case ${4} in
         name)
-          validate_name $5
-          exist_not_ok $5.$zone A
-          case $6 in
+          validate_name ${5}
+          exist_not_ok "${5}.${zone}" A
+          case ${6} in
           ip)
-            validate_ip $7
-            add_record_a $5 $7
+            validate_ip ${7}
+            add_record_a ${5} ${7}
             change_success=0
             ;;
           *)
@@ -1333,14 +1333,14 @@ call () {
         esac
         ;;
       [Cc][Nn][Aa][Mm][Ee])
-        case $4 in
+        case ${4} in
         name)
-          validate_name $5
-          exist_not_ok $5.$zone CNAME
-          case $6 in
+          validate_name ${5}
+          exist_not_ok "${5}.${zone}" CNAME
+          case ${6} in
           cname)
-            if [[ "$7" =~ ^[a-zA-Z0-9]{1,63}(\.[a-zA-Z0-9]{1,63})*$ ]]; then
-              add_record_cname $5 $7
+            if [[ "${7}" =~ ^[a-zA-Z0-9]{1,63}(\.[a-zA-Z0-9]{1,63})*$ ]]; then
+              add_record_cname ${5} ${7}
               change_success=0
             else
               echo "Provided FQDN CNAME is not valid"
@@ -1360,14 +1360,14 @@ call () {
         esac
         ;;
       [Tt][Xx][Tt])
-        case $4 in
+        case ${4} in
         name)
-          validate_name $5
-          exist_not_ok $5.$zone TXT
-          case $6 in
+          validate_name ${5}
+          exist_not_ok "${5}.${zone}" TXT
+          case ${6} in
           val)
-            if [[ "$7" != "" ]]; then
-              add_record_txt $5 $7
+            if [[ "${7}" != "" ]]; then
+              add_record_txt ${5} ${7}
               change_success=0
             else
               echo "expecting some value"
@@ -1387,13 +1387,13 @@ call () {
         esac
         ;;
       [Nn][Ss])
-        case $4 in
+        case ${4} in
         name)
-          validate_name $5
-          case $6 in
+          validate_name ${5}
+          case ${6} in
           ip)
-            validate_ip $7
-            add_record_ns $5 $7
+            validate_ip ${7}
+            add_record_ns ${5} ${7}
             change_success=0
             ;;
           *)
@@ -1421,14 +1421,14 @@ call () {
     esac
     ;;
   remove)
-    case $2 in
+    case ${2} in
       record)
-        case $3 in
+        case ${3} in
         [aA])
-          case $4 in
+          case ${4} in
           name)
-            validate_name $5
-            remove_record_by_name $5 A
+            validate_name ${5}
+            remove_record_by_name ${5} A
             change_success=0
             ;;
           *)
@@ -1436,10 +1436,10 @@ call () {
           esac
           ;;
         [Cc][Nn][Aa][Mm][Ee])
-          case $4 in
+          case ${4} in
           name)
-            validate_name $5
-            remove_record_by_name $5 CNAME
+            validate_name ${5}
+            remove_record_by_name ${5} CNAME
             change_success=0
             ;;
           *)
@@ -1447,10 +1447,10 @@ call () {
           esac
           ;;
         [Tt][Xx][Tt])
-          case $4 in
+          case ${4} in
           name)
-            validate_name $5
-            remove_record_by_name $5 TXT
+            validate_name ${5}
+            remove_record_by_name ${5} TXT
             change_success=0
             ;;
           *)
@@ -1501,7 +1501,7 @@ wait_resolve_ok() {
   while [ "$res" != ""  ] && [ $dl -gt 0 ];
   do
     sleep 1m
-    res=$(dig -t txt $1 +noall +answer +norecurse | grep $2)
+    res=$(dig -t txt ${1} +noall +answer +norecurse | grep ${2})
     count=$(expr $count - 1)
   done
   exit 1
@@ -1513,7 +1513,7 @@ wait_resolve_nok() {
   while [ "$res" == ""  ] && [ $dl -gt 0 ];
   do
     sleep 1m
-    res=$(dig -t txt $1 +noall +answer +norecurse)
+    res=$(dig -t txt ${1} +noall +answer +norecurse)
     count=$(expr $count - 1)
   done
   exit 1
@@ -1522,16 +1522,16 @@ wait_resolve_nok() {
 dns_to_add() {
   fulldomain="${1}"
   txtvalue="${2}"
-  name=$(echo $fulldomain | cut -d "." -f 1)
-  call add record txt name $name val $txtvalue
+  name=$(echo ${fulldomain} | cut -d "." -f 1)
+  call add record txt name ${name} val ${txtvalue}
   call reload server master
-  wait_resolve_ok $fulldomain $txtvalue
+  wait_resolve_ok ${fulldomain} ${txtvalue}
 }
 
 dns_to_rm() {
   fulldomain="${1}"
-  name=$(echo $fulldomain | cut -d "." -f 1)
-  call remove record txt name $name
+  name=$(echo ${fulldomain} | cut -d "." -f 1)
+  call remove record txt name ${name}
   call reload server master
-  wait_resolve_nok $fulldomain
+  wait_resolve_nok ${fulldomain}
 }

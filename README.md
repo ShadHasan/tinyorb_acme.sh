@@ -1,13 +1,17 @@
 ## TINYORB ACME
 
 --------------------------------
+Tinyorb ACME has been forked from ACMESH project, in order to integrate the `Tinyorb dnsapi`. 
 
-Tinyorb ACME has been forked from ACMESH project, in order to integrate the `Tinyorb dnsapi`.
+Source code [link](https://ShadHasan@bitbucket.org/tinyorb_team/tinyorb_dnsapi.git)
 
 
 ### How to use as cli
 1. Declare the variable file at path `resource/dnsapi_to`
 2. If dnsapi has not been initiated then first init the dns and add ns1 and ns2 server to the dns provider site.
+   ```
+   $> ./dnsapi_cli init
+   ```
 3. Command to generate certificate
    1. Directly to zone
    ```
