@@ -17,18 +17,18 @@ set -eE
 # trap "Error occurred" ERR # doesn't work with debug
 
 path="$(readlink -f ${BASH_SOURCE[0]})"
-resource_path="~/.dnsapi_to"
+resource_path="${HOME}/.dnsapi_to"
 
 # Here we source variable file
 if [ -f "${resource_path}/variable.sh" ]; then
   source "${resource_path}/variable.sh"
 else
-  echo "Please create variable file at path: ${resource_path}/variable.sh"
-  exit 0
+  echo "Please create initial dns server detail using command, 'dnsapi init dns' "
 fi
 
 
-zone_config_path="${resource_path}/tmpattempt/conf/${zone}"
+zone_config_path="${resource_path}/conf/${zone}"
+echo ${zone_config_path}
 meta_info="${zone_config_path}/meta.info"
 if [ ! -d "${zone_config_path}" ]; then
   echo "not exist, zone path creating"
@@ -120,6 +120,56 @@ function status() {
       echo "Service status unknown"
       echo "Verify deployment status if you are troubleshooting"
     fi
+}
+
+function init_dns() {
+  echo "Warning! This will erase and reset the previous dns server configuration, if you want proceed please type 'yes' and enter?"
+   read accept
+   if [[ "$accept" != "yes" ]]; then
+       exit 1;
+   fi
+   echo "Enter server ip for primary dns"
+   read master_dns_host
+   validate_ip ${master_dns_host}
+   echo "Enter server user of primary dns , note password is not required. So please make ssh passwordless login"
+   read user
+   enable_alt="false"
+   echo "Enable alternate dns, if yes please type 'yes' and enter?"
+   read alt_yes
+   if [[ "${alt_yes}" == "yes" ]]; then
+     enable_alt="true"
+     echo "Enter server ip for alternate dns"
+     read alt_dns_host
+     echo "Enter server user for alternate dns"
+     read alt_user
+   fi
+   native_client="false"
+   echo "Enable test native client, if yes type 'yes' and enter?"
+   read client_yes
+   if [[ "${client_yes}" == "yes" ]]; then
+     native_client="true"
+   fi
+   echo "Enter zone information"
+   read zone
+   validate_name $zone
+   if [[ -z "${zone}" ]]; then
+     echo "${zone} not valid"
+     exit 1
+   fi
+
+echo "Creating all necessary configuration at ${resource_path}/variable.sh"
+cat > ${resource_path}/variable.sh << END
+   master_dns_host=${master_dns_host}
+   alt_dns_host=${alt_dns_host}
+   user=${user}
+   alt_user=${alt_user}
+   remote_tmp_path=/tmp/
+   enable_alt=${enable_alt}
+   zone=${zone}
+   native_dns_client=${native_client}
+END
+echo "Done"
+
 }
 
 function init_config() {
@@ -849,7 +899,17 @@ function show_ns_client() {
 call () {
   case ${1} in
   init)
-    init_config
+    case ${2} in
+    zone)
+      init_config
+      ;;
+    dns)
+      init_dns
+      ;;
+    *)
+      echo "Try dnsapi init zone|dns"
+      ;;
+    esac
     ;;
   start)
     case ${2} in
@@ -1535,3 +1595,6 @@ dns_to_rm() {
   call reload server master
   wait_resolve_nok ${fulldomain}
 }
+
+
+call $@
