@@ -7,19 +7,23 @@ Source code [link](https://ShadHasan@bitbucket.org/tinyorb_team/tinyorb_dnsapi.g
 
 
 ### How to use as cli
-1. Declare the variable file at path `resource/dnsapi_to`
-2. If dnsapi has not been initiated then first init the dns and add ns1 and ns2 server to the dns provider site.
+1. Install acme.sh, go to `acme.sh/` folder and run below command
    ```
-   $> ./dnsapi_cli init
+   $> ./acme.sh --install -m <your email account>
    ```
-3. Command to generate certificate
+2. If dnsapi has not been initiated then first init the dns and zone, go to `acme.sh/dnsapi/` path
+   ```
+   $> ./dnsapi_to init dns
+   $> ./dnsapi_to init zone
+   ```
+3. Add dns server detail as NS record to the dns provider site. Note `ns1.<zone domain>` is your primary dns serer and `ns2.<zone domain>` is alternate dns server 
+4. Command to generate certificate
    1. Directly to zone
    ```
    $> ./acme.sh --issue --dns dns_to -d $zone -d *.$zone 
    ```
-   Note: zone variable is declared at path `resource/dnsapi_to/variable.sh`
    2. Using as an alias
-      With reference of acme [wiki](https://github.com/acmesh-official/acme.sh/wiki/DNS-alias-mode)
+      With reference of acme [wiki](https://github.com/acmesh-official/acme.sh/wiki/DNS-alias-mode).
       This feature helps certificate generation without exposing api, or other mean of dns.
    
       1. For all domain you have to create CNAME record
