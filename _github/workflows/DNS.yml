@@ -3,13 +3,13 @@ on:
   push:
     paths:
       - 'dnsapi/*.sh'
-      - '.github/workflows/DNS.yml'
+      - '_github/workflows/DNS.yml'
   pull_request:
     branches:
       - 'dev'
     paths:
       - 'dnsapi/*.sh'
-      - '.github/workflows/DNS.yml'
+      - '_github/workflows/DNS.yml'
 
 
 jobs:

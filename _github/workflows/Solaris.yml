@@ -1,22 +1,22 @@
-name: MacOS
+name: Solaris
 on:
   push:
     branches:
       - '*'
     paths:
       - '*.sh'
-      - '.github/workflows/MacOS.yml'
+      - '_github/workflows/Solaris.yml'
 
   pull_request:
     branches:
       - dev
     paths:
       - '*.sh'
-      - '.github/workflows/MacOS.yml'
+      - '_github/workflows/Solaris.yml'
 
 
 jobs:
-  MacOS:
+  Solaris:
     strategy:
       matrix:
         include:
@@ -30,7 +30,7 @@ jobs:
          #  CA: "ZeroSSL RSA Domain Secure Site CA"
          #  CA_EMAIL: "githubtest@acme.sh"
          #  TEST_PREFERRED_CHAIN: ""
-    runs-on: macos-latest
+    runs-on: macos-10.15
     env:
       TEST_LOCAL: 1
       TEST_ACME_Server: ${{ matrix.TEST_ACME_Server }}
@@ -40,16 +40,22 @@ jobs:
       TEST_PREFERRED_CHAIN: ${{ matrix.TEST_PREFERRED_CHAIN }}
     steps:
     - uses: actions/checkout@v2
-    - name: Install tools
-      run:  brew install socat
+    - uses: vmactions/cf-tunnel@v0.0.3
+      id: tunnel
+      with:
+        protocol: http
+        port: 8080
+    - name: Set envs
+      run: echo "TestingDomain=${{steps.tunnel.outputs.server}}" >> $GITHUB_ENV
     - name: Clone acmetest
-      run: |
-          cd .. \
-          && git clone https://github.com/acmesh-official/acmetest.git \
-          && cp -r acme.sh acmetest/
-    - name: Run acmetest
-      run: |
+      run: cd .. && git clone https://github.com/acmesh-official/acmetest.git  && cp -r acme.sh acmetest/
+    - uses: vmactions/solaris-vm@v0.0.5
+      with:
+        envs: 'TEST_LOCAL TestingDomain TEST_ACME_Server CA_ECDSA CA CA_EMAIL TEST_PREFERRED_CHAIN'
+        nat: |
+          "8080": "80"
+        prepare: pkgutil -y -i socat curl
+        run: |
           cd ../acmetest \
-          && sudo --preserve-env ./letest.sh
-
+          && ./letest.sh
 

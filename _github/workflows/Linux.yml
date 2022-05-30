@@ -5,14 +5,14 @@ on:
       - '*'
     paths:
       - '*.sh'
-      - '.github/workflows/Linux.yml'
+      - '_github/workflows/Linux.yml'
 
   pull_request:
     branches:
       - dev
     paths:
       - '*.sh'
-      - '.github/workflows/Linux.yml'
+      - '_github/workflows/Linux.yml'
 
 
 

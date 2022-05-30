@@ -5,13 +5,13 @@ on:
       - '*'
     paths:
       - '**.sh'
-      - '.github/workflows/shellcheck.yml'
+      - '_github/workflows/shellcheck.yml'
   pull_request:
     branches:
       - dev
     paths:
       - '**.sh'
-      - '.github/workflows/shellcheck.yml'
+      - '_github/workflows/shellcheck.yml'
 
 jobs:
   ShellCheck:

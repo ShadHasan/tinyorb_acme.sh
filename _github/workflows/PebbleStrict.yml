@@ -5,13 +5,13 @@ on:
       - '*'
     paths:
       - '*.sh'
-      - '.github/workflows/PebbleStrict.yml'
+      - '_github/workflows/PebbleStrict.yml'
   pull_request:
     branches:
       - dev
     paths:
       - '*.sh'
-      - '.github/workflows/PebbleStrict.yml'
+      - '_github/workflows/PebbleStrict.yml'
 
 jobs:
   PebbleStrict:

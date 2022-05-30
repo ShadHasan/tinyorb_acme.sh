@@ -1,22 +1,22 @@
-name: FreeBSD
+name: MacOS
 on:
   push:
     branches:
       - '*'
     paths:
       - '*.sh'
-      - '.github/workflows/FreeBSD.yml'
+      - '_github/workflows/MacOS.yml'
 
   pull_request:
     branches:
       - dev
     paths:
       - '*.sh'
-      - '.github/workflows/FreeBSD.yml'
+      - '_github/workflows/MacOS.yml'
 
 
 jobs:
-  FreeBSD:
+  MacOS:
     strategy:
       matrix:
         include:
@@ -30,7 +30,7 @@ jobs:
          #  CA: "ZeroSSL RSA Domain Secure Site CA"
          #  CA_EMAIL: "githubtest@acme.sh"
          #  TEST_PREFERRED_CHAIN: ""
-    runs-on: macos-10.15
+    runs-on: macos-latest
     env:
       TEST_LOCAL: 1
       TEST_ACME_Server: ${{ matrix.TEST_ACME_Server }}
@@ -40,24 +40,16 @@ jobs:
       TEST_PREFERRED_CHAIN: ${{ matrix.TEST_PREFERRED_CHAIN }}
     steps:
     - uses: actions/checkout@v2
-    - uses: vmactions/cf-tunnel@v0.0.3
-      id: tunnel
-      with:
-        protocol: http
-        port: 8080
-    - name: Set envs
-      run: echo "TestingDomain=${{steps.tunnel.outputs.server}}" >> $GITHUB_ENV
+    - name: Install tools
+      run:  brew install socat
     - name: Clone acmetest
-      run: cd .. && git clone https://github.com/acmesh-official/acmetest.git  && cp -r acme.sh acmetest/
-    - uses: vmactions/freebsd-vm@v0.1.5
-      with:
-        envs: 'TEST_LOCAL TestingDomain TEST_ACME_Server CA_ECDSA CA CA_EMAIL TEST_PREFERRED_CHAIN'
-        nat: |
-          "8080": "80"
-        prepare: pkg install -y socat curl
-        usesh: true
-        run: |
+      run: |
+          cd .. \
+          && git clone https://github.com/acmesh-official/acmetest.git \
+          && cp -r acme.sh acmetest/
+    - name: Run acmetest
+      run: |
           cd ../acmetest \
-          && ./letest.sh
+          && sudo --preserve-env ./letest.sh
 
 

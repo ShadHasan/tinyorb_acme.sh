@@ -9,7 +9,7 @@ on:
     paths:
       - '**.sh'
       - "Dockerfile"
-      - '.github/workflows/dockerhub.yml'
+      - '_github/workflows/dockerhub.yml'
 
     
 jobs:

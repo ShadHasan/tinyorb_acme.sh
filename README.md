@@ -6,7 +6,25 @@ Tinyorb ACME has been forked from ACMESH project, in order to integrate the `Tin
 Source code [link](https://ShadHasan@bitbucket.org/tinyorb_team/tinyorb_dnsapi.git)
 
 
-### How to use as cli
+## How to use as cli
+First install the acme.sh, tinyorb_dnsapi will be installed along with:
+   ```
+   $> ./acme.sh --install -m <your email account>
+   ```
+
+### How to use `acme.sh` cli
+It is always recommend to use full reference [wiki](https://github.com/acmesh-official/acme.sh/wiki)
+
+### How to use `tinyorb_dnsapi` cli
+`tinyorb dnsapi` is located at `~/.acme.sh/dnsapi`. Command line goes as below:
+```
+$> ./dnsapi_to help
+```
+For more detail to use tinyorb_dnsapi cli refer 
+[readme](https://bitbucket.org/tinyorb_team/tinyorb_dnsapi/src/master/ReadMe.md) and 
+[test](https://bitbucket.org/tinyorb_team/tinyorb_dnsapi/src/master/test/test_case.md)
+
+### How to generate certificate complete step
 1. Install acme.sh, go to `acme.sh/` folder and run below command
    ```
    $> ./acme.sh --install -m <your email account>
@@ -44,4 +62,7 @@ Source code [link](https://ShadHasan@bitbucket.org/tinyorb_team/tinyorb_dnsapi.g
          -d  *.example.com \ 
          ```
          Note: In our case `aliasDomainForValidationOnly.com` should replace with $zone
-         
+
+### How to use dockerized version
+
+## Why docker? and benefits
